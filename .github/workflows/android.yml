@@ -1,6 +1,7 @@
-name: Build Android APK
+name: Android CI
 
 on:
+  push:
   workflow_dispatch:
 
 jobs:
@@ -8,39 +9,39 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Check out repository
+      - name: Checkout
         uses: actions/checkout@v4
 
       - name: Extract Android project
         run: |
-          unzip -o CreatorTool_Android_Project.zip
-          cd CreatorTool_Android
-          find . -maxdepth 2 -type f | sort
+          unzip -q CreatorTool_Android_Project.zip -d extracted
+          test -f extracted/CreatorTool_Android/settings.gradle
 
-      - name: Set up Java 17
+      - name: Setup Java
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
 
-      - name: Set up Android SDK
+      - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
       - name: Install Android SDK
         run: |
           sdkmanager "platforms;android-35" "build-tools;35.0.0"
 
-      - name: Set up Gradle
+      - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.9'
+          cache-disabled: true
 
       - name: Build APK
-        working-directory: CreatorTool_Android
+        working-directory: extracted/CreatorTool_Android
         run: gradle --no-daemon assembleDebug
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: creator-tool-debug-apk
-          path: CreatorTool_Android/app/build/outputs/apk/debug/app-debug.apk
+          name: CreatorTool-Android
+          path: extracted/CreatorTool_Android/app/build/outputs/apk/debug/app-debug.apk
