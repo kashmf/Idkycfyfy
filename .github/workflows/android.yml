@@ -19,27 +19,29 @@ jobs:
           ZIP_FILE="$(find . -maxdepth 1 -type f -iname '*.zip' -print -quit)"
 
           if [ -z "$ZIP_FILE" ]; then
-            echo "ERROR: No ZIP found!"
+            echo "ERROR: No ZIP file found in repository."
             exit 1
           fi
 
-          echo "Found: $ZIP_FILE"
+          echo "Found ZIP: $ZIP_FILE"
 
           mkdir -p extracted
           unzip -q "$ZIP_FILE" -d extracted
 
-          SETTINGS_FILE="$(find extracted -type f \( -name settings.gradle -o -name settings.gradle.kts \) -print -quit)"
+          echo "Extracted files:"
+          find extracted -maxdepth 4 -type f | sort
+
+          SETTINGS_FILE="$(find extracted -type f \( -name 'settings.gradle' -o -name 'settings.gradle.kts' \) -print -quit)"
 
           if [ -z "$SETTINGS_FILE" ]; then
-            echo "ERROR: settings.gradle not found!"
-            find extracted -maxdepth 4 -type f
+            echo "ERROR: settings.gradle was not found."
             exit 1
           fi
 
           PROJECT_DIR="$(dirname "$SETTINGS_FILE")"
 
           if [ ! -f "$PROJECT_DIR/app/build.gradle" ] && [ ! -f "$PROJECT_DIR/app/build.gradle.kts" ]; then
-            echo "ERROR: Android app module not found!"
+            echo "ERROR: Android app module was not found."
             exit 1
           fi
 
@@ -53,11 +55,15 @@ jobs:
           java-version: '17'
 
       - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
+        uses: android-actions/setup-android@v4
+        with:
+          packages: platform-tools
 
-      - name: Install Android SDK
+      - name: Install Android SDK packages
+        shell: bash
         run: |
-          sdkmanager "platforms;android-35" "build-tools;35.0.0"
+          sdkmanager "platforms;android-35" \
+                     "build-tools;35.0.0"
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
@@ -71,14 +77,16 @@ jobs:
           gradle --no-daemon assembleDebug
 
       - name: Verify APK
+        shell: bash
         run: |
           APK="${{ steps.extract.outputs.project_dir }}/app/build/outputs/apk/debug/app-debug.apk"
 
           if [ ! -f "$APK" ]; then
-            echo "ERROR: APK was not generated!"
+            echo "ERROR: APK was not generated."
             exit 1
           fi
 
+          echo "APK successfully created:"
           ls -lh "$APK"
 
       - name: Upload APK
